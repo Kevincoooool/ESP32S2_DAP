@@ -154,53 +154,30 @@ static uint8_t DAP_Info(uint8_t id, uint8_t *info)
 
 // Timer Functions
 
-// #if ((DAP_SWD != 0) || (DAP_JTAG != 0))
+#if ((DAP_SWD != 0) || (DAP_JTAG != 0))
 
-// #ifdef RTE_CMSIS_RTOS
+static uint32_t TimerTick;
 
-// static uint32_t TimerTick;
+// Start Timer
+static __inline void TIMER_START(uint32_t usec)
+{
+  TimerTick = xTaskGetTickCount();
+}
 
-// // Start Timer
-// static __inline void TIMER_START(uint32_t usec)
-// {
-//   TimerTick = osKernelSysTick() + osKernelSysTickMicroSec(usec);
-// }
+// Stop Timer
+static __inline void TIMER_STOP(void) {
 
-// // Stop Timer
-// static __inline void TIMER_STOP(void) {}
+}
 
-// // Check if Timer expired
-// static __inline uint32_t TIMER_EXPIRED(void)
-// {
-//   return ((osKernelSysTick() > TimerTick) ? 1U : 0U);
-// }
+// Check if Timer expired
+static __inline uint32_t TIMER_EXPIRED(void)
+{
+  return ((xTaskGetTickCount() > TimerTick) ? 1U : 0U);
+}
 
-// #else
 
-// // Start Timer
-// static __inline void TIMER_START(uint32_t usec)
-// {
-//   SysTick->VAL = 0U;
-//   SysTick->LOAD = usec * (CPU_CLOCK / 1000000U);
-//   SysTick->CTRL = (1U << SysTick_CTRL_ENABLE_Pos) |
-//                   (1U << SysTick_CTRL_CLKSOURCE_Pos);
-// }
 
-// // Stop Timer
-// static __inline void TIMER_STOP(void)
-// {
-//   SysTick->CTRL = 0U;
-// }
-
-// // Check if Timer expired
-// static __inline uint32_t TIMER_EXPIRED(void)
-// {
-//   return ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) ? 1U : 0U);
-// }
-
-// #endif
-
-// #endif
+#endif
 
 // Delay for specified time
 //    delay:  delay time in ms
@@ -261,7 +238,7 @@ static uint32_t DAP_HostStatus(const uint8_t *request, uint8_t *response)
 static uint32_t DAP_Connect(const uint8_t *request, uint8_t *response)
 {
   uint32_t port;
-
+ESP_LOGI("SWD_DELAY","DAP_Connect");
   if (*request == DAP_PORT_AUTODETECT)
   {
     port = DAP_DEFAULT_PORT;
@@ -325,6 +302,7 @@ static uint32_t DAP_ResetTarget(uint8_t *response)
 //             number of bytes in request (upper 16 bits)
 static uint32_t DAP_SWJ_Pins(const uint8_t *request, uint8_t *response)
 {
+  
 #if ((DAP_SWD != 0) || (DAP_JTAG != 0))
   uint32_t value;
   uint32_t select;
@@ -372,8 +350,8 @@ static uint32_t DAP_SWJ_Pins(const uint8_t *request, uint8_t *response)
     PIN_nRESET_OUT(value >> DAP_SWJ_nRESET);
   }
 
-  
-	if (wait != 0U) {
+  ESP_LOGI("SWD_DELAY","DELAY");
+	if (wait) {
 #if (TIMESTAMP_CLOCK != 0U)
     if (wait > 3000000U) { 
       wait = 3000000U;
@@ -386,8 +364,9 @@ static uint32_t DAP_SWJ_Pins(const uint8_t *request, uint8_t *response)
 #else
     wait  = 1U;
 #endif
-	uint32_t timestamp = xTaskGetTickCount();
-    //TIMER_START(wait);
+	// uint32_t timestamp = xTaskGetTickCount();
+  ESP_LOGI("SWD_DELAY","DELAY1");
+    TIMER_START(wait);
     do
     {
       if (select & (1U << DAP_SWJ_SWCLK_TCK))
@@ -426,8 +405,9 @@ static uint32_t DAP_SWJ_Pins(const uint8_t *request, uint8_t *response)
         }
       }
       break;
-    } while ((xTaskGetTickCount() - timestamp) < wait);
-//    TIMER_STOP();
+    } while (!TIMER_EXPIRED());
+    ESP_LOGI("SWD_DELAY","DELAY2");
+    TIMER_STOP();
   }
 
   value = (PIN_SWCLK_TCK_IN() << DAP_SWJ_SWCLK_TCK) |
@@ -701,6 +681,7 @@ static uint32_t DAP_TransferConfigure(const uint8_t *request, uint8_t *response)
 #if (DAP_SWD != 0)
 static uint32_t DAP_SWD_Transfer(const uint8_t *request, uint8_t *response)
 {
+  ESP_LOGI("SWD_DELAY","DAP_SWD_Transfer");
   const uint8_t *request_head;
   uint32_t request_count;
   uint32_t request_value;
@@ -729,10 +710,12 @@ static uint32_t DAP_SWD_Transfer(const uint8_t *request, uint8_t *response)
   request++; // Ignore DAP index
 
   request_count = *request++;
-
+  ESP_LOGI("SWD_DELAY","DAP_SWD_Transfer%d",request_count);
   for (; request_count; request_count--)
   {
+   
     request_value = *request++;
+     ESP_LOGI("SWD_DELAY","DAP_SWD_Transfer%d",request_value);
     if (request_value & DAP_TRANSFER_RnW)
     {
       // Read register
@@ -742,6 +725,7 @@ static uint32_t DAP_SWD_Transfer(const uint8_t *request, uint8_t *response)
         retry = DAP_Data.transfer.retry_count;
         if ((request_value & (DAP_TRANSFER_APnDP | DAP_TRANSFER_MATCH_VALUE)) == DAP_TRANSFER_APnDP)
         {
+          ESP_LOGI("SWD_DELAY","Read previous AP and post next AP read");
           // Read previous AP data and post next AP read
           do
           {
@@ -750,6 +734,7 @@ static uint32_t DAP_SWD_Transfer(const uint8_t *request, uint8_t *response)
         }
         else
         {
+          ESP_LOGI("SWD_DELAY","Read previous AP");
           // Read previous AP data
           do
           {
@@ -759,6 +744,7 @@ static uint32_t DAP_SWD_Transfer(const uint8_t *request, uint8_t *response)
         }
         if (response_value != DAP_TRANSFER_OK)
         {
+          ESP_LOGI("SWD_DELAY","DAP_TRANSFER_ERROR1");
           break;
         }
         // Store previous AP data
@@ -827,8 +813,10 @@ static uint32_t DAP_SWD_Transfer(const uint8_t *request, uint8_t *response)
             } while ((response_value == DAP_TRANSFER_WAIT) && retry-- && !DAP_TransferAbort);
             if (response_value != DAP_TRANSFER_OK)
             {
+              ESP_LOGI("SWD_DELAY","DAP_TRANSFER_ERROR2");
               break;
             }
+
             post_read = 1U;
           }
         }
@@ -841,6 +829,7 @@ static uint32_t DAP_SWD_Transfer(const uint8_t *request, uint8_t *response)
           } while ((response_value == DAP_TRANSFER_WAIT) && retry-- && !DAP_TransferAbort);
           if (response_value != DAP_TRANSFER_OK)
           {
+            ESP_LOGI("SWD_DELAY","DAP_TRANSFER_ERROR3");
             break;
           }
           // Store data
@@ -1726,7 +1715,7 @@ uint32_t DAP_ProcessCommand(const uint8_t *request, uint8_t *response)
   }
 
   *response++ = *request;
-
+ESP_LOGI("SWD_DELAY","DAP_ProcessCommand %d",*request);
   switch (*request++)
   {
   case ID_DAP_Info:
@@ -1754,6 +1743,7 @@ uint32_t DAP_ProcessCommand(const uint8_t *request, uint8_t *response)
     break;
 
   case ID_DAP_SWJ_Pins:
+  
     num = DAP_SWJ_Pins(request, response);
     break;
   case ID_DAP_SWJ_Clock:

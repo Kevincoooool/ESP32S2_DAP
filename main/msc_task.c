@@ -15,17 +15,46 @@
 #include "sdkconfig.h"
 #include "tinyusb.h"
 #include "msc_task.h"
+#include "esp_partition.h"
 static const char *TAG = "MSC_TASK";
+const esp_partition_t *find_partition = NULL;
 void msc_task(void *params)
 {
 	(void)params;
+//    const char* data = "Test read amd write partition1122";
+//     uint8_t dest_data[1024] = {0};
+    
+//     find_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
+//     if(find_partition == NULL){
+// 	    printf("No partition found!\r\n");
+// 	    return -1;
+//     }
 
+    // printf("Erase custom partition\r\n");
+    // if (esp_partition_erase_range(find_partition, 0, 0x1000) != ESP_OK) {
+	//     printf("Erase partition error");
+	//     return -1;
+    // }
+
+    // printf("Write data to custom partition\r\n");
+    // if (esp_partition_write(find_partition, 0, data, strlen(data) + 1) != ESP_OK) {   // incude '\0'
+	//     printf("Write partition data error");
+	//     return -1;
+    // }
+
+    // printf("Read data from custom partition\r\n");
+    // if (esp_partition_read(find_partition, 0, dest_data, 1024) != ESP_OK) {
+	//     printf("Read partition data error");
+	//     return -1;
+    // }
+
+    // printf("Receive data: %s\r\n", (char*)dest_data);
 	// RTOS forever loop
 	while (1)
 	{
-
+		
 		// For ESP32-S2 this delay is essential to allow idle how to run and reset wdt
-		vTaskDelay(pdMS_TO_TICKS(10));
+		vTaskDelay(pdMS_TO_TICKS(50));
 	}
 }
 #define README_CONTENTS \
@@ -35,7 +64,7 @@ issue at github.com/hathach/tinyusb11"
 
 enum
 {
-	DISK_BLOCK_NUM = 16, // 8KB is the smallest size that windows allow to mount
+	DISK_BLOCK_NUM = 160, // 8KB is the smallest size that windows allow to mount
 	DISK_BLOCK_SIZE = 512
 };
 
@@ -178,9 +207,9 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void *buff
 	(void)lun;
 	ESP_LOGD(__func__, "");
 
-	uint8_t const *addr = msc_disk[lba] + offset;
+	uint8_t const *addr = msc_disk[lba]+ offset;
 	memcpy(buffer, addr, bufsize);
-
+// esp_partition_read(find_partition, addr, buffer, bufsize);
 	return bufsize;
 }
 
@@ -193,7 +222,9 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t *
 
 #ifndef CFG_EXAMPLE_MSC_READONLY
 	uint8_t *addr = msc_disk[lba] + offset;
+	// uint8_t *addr =  offset;
 	memcpy(addr, buffer, bufsize);
+	// esp_partition_write(find_partition, addr, buffer, bufsize);
 #else
 	(void)lba;
 	(void)offset;

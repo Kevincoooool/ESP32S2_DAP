@@ -37,8 +37,8 @@ void hid_task(void *params)
 			dealing_data = 0;
 		}
 		// For ESP32-S2 this delay is essential to allow idle how to run and reset wdt
-		//vTaskDelay(pdMS_TO_TICKS(10));
-		vTaskDelay(10 / portTICK_RATE_MS);
+		vTaskDelay(pdMS_TO_TICKS(2));
+		// vTaskDelay(10 / portTICK_RATE_MS);
 	}
 	//vTaskDelay(pdMS_TO_TICKS(5));
 }
@@ -72,9 +72,9 @@ void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uin
 	//没有在处理数据过程中才会接收 不然直接退出
 	if (dealing_data)
 		return; // Discard packet when buffer is full
-	memcpy(MYUSB_Request, buffer, 64);
+	memcpy(MYUSB_Request, buffer, bufsize);
 	dealing_data = 1;
-	hid_len = 64;
+	
 	// echo back anything we received from host
 	// tud_hid_report(0, buffer, bufsize);
 }

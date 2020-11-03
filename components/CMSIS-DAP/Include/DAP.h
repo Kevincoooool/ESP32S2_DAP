@@ -239,7 +239,7 @@ extern void     DAP_Setup (void);
 #endif
 static inline void PIN_DELAY_SLOW (uint32_t delay) {
   uint32_t count;
-
+  // ESP_LOGI("SWD_DELAY","PIN_DELAY_SLOW");
   count = delay;
   while (--count);
 }
