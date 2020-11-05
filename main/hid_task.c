@@ -37,7 +37,7 @@ void hid_task(void *params)
 			dealing_data = 0;
 		}
 		// For ESP32-S2 this delay is essential to allow idle how to run and reset wdt
-		vTaskDelay(pdMS_TO_TICKS(2));
+		vTaskDelay(pdMS_TO_TICKS(5));
 		// vTaskDelay(10 / portTICK_RATE_MS);
 	}
 	//vTaskDelay(pdMS_TO_TICKS(5));

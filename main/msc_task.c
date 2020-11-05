@@ -16,39 +16,41 @@
 #include "tinyusb.h"
 #include "msc_task.h"
 #include "esp_partition.h"
+
 static const char *TAG = "MSC_TASK";
 const esp_partition_t *find_partition = NULL;
 void msc_task(void *params)
 {
 	(void)params;
-//    const char* data = "Test read amd write partition1122";
-//     uint8_t dest_data[1024] = {0};
+
+	const char* data = "Test read amd write partition1122";
+    uint8_t dest_data[1024] = {0};
     
-//     find_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
-//     if(find_partition == NULL){
-// 	    printf("No partition found!\r\n");
-// 	    return -1;
-//     }
+    find_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
+    if(find_partition == NULL){
+	    printf("No partition found!\r\n");
+	    return -1;
+    }
 
-    // printf("Erase custom partition\r\n");
-    // if (esp_partition_erase_range(find_partition, 0, 0x1000) != ESP_OK) {
-	//     printf("Erase partition error");
-	//     return -1;
-    // }
+    printf("Erase custom partition\r\n");
+    if (esp_partition_erase_range(find_partition, 0, 0x1000) != ESP_OK) {
+	    printf("Erase partition error");
+	    return -1;
+    }
 
-    // printf("Write data to custom partition\r\n");
-    // if (esp_partition_write(find_partition, 0, data, strlen(data) + 1) != ESP_OK) {   // incude '\0'
-	//     printf("Write partition data error");
-	//     return -1;
-    // }
+    printf("Write data to custom partition\r\n");
+    if (esp_partition_write(find_partition, 0, data, strlen(data) + 1) != ESP_OK) {   // incude '\0'
+	    printf("Write partition data error");
+	    return -1;
+    }
 
-    // printf("Read data from custom partition\r\n");
-    // if (esp_partition_read(find_partition, 0, dest_data, 1024) != ESP_OK) {
-	//     printf("Read partition data error");
-	//     return -1;
-    // }
+    printf("Read data from custom partition\r\n");
+    if (esp_partition_read(find_partition, 0, dest_data, 1024) != ESP_OK) {
+	    printf("Read partition data error");
+	    return -1;
+    }
 
-    // printf("Receive data: %s\r\n", (char*)dest_data);
+    printf("Receive data: %s\r\n", (char*)dest_data);
 	// RTOS forever loop
 	while (1)
 	{

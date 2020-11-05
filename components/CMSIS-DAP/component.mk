@@ -3,5 +3,5 @@
 #
 # (Uses default behaviour of compiling all source files in directory, adding 'include' to include path.)
 COMPONENT_ADD_INCLUDEDIRS := Include
-
+COMPONENT_ADD_INCLUDEDIRS := cmsis-core
 COMPONENT_SRCDIRS := Source

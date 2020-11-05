@@ -15,9 +15,9 @@
 #include "sdkconfig.h"
 #include "tinyusb.h"
 #include "webusb_task.h"
-#include "../components/CMSIS-DAP/Include/DAP.h"
+#include "DAP.h"
 
-static const char *TAG = "HID_TASK";
+static const char *TAG = "WEB_TASK";
 
 enum
 {
@@ -25,7 +25,32 @@ enum
     VENDOR_REQUEST_MICROSOFT = 2
 };
 
-uint8_t const desc_ms_os_20[100] = {0};
+uint8_t const desc_ms_os_20[] =
+    {
+        // Set header: length, type, windows version, total length
+        U16_TO_U8S_LE(0x000A), U16_TO_U8S_LE(MS_OS_20_SET_HEADER_DESCRIPTOR), U32_TO_U8S_LE(0x06030000), U16_TO_U8S_LE(0XB2),
+
+        // Configuration subset header: length, type, configuration index, reserved, configuration total length
+        U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_CONFIGURATION), 0, 0, U16_TO_U8S_LE(0XB2 - 0x0A),
+
+        // Function Subset header: length, type, first interface, reserved, subset length
+        U16_TO_U8S_LE(0x0008), U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_FUNCTION), 4, 0, U16_TO_U8S_LE(0XB2 - 0x0A - 0x08),
+
+        // MS OS 2.0 Compatible ID descriptor: length, type, compatible ID, sub compatible ID
+        U16_TO_U8S_LE(0x0014), U16_TO_U8S_LE(MS_OS_20_FEATURE_COMPATBLE_ID), 'W', 'I', 'N', 'U', 'S', 'B', 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // sub-compatible
+
+        // MS OS 2.0 Registry property descriptor: length, type
+        U16_TO_U8S_LE(0xB2 - 0x0A - 0x08 - 0x08 - 0x14), U16_TO_U8S_LE(MS_OS_20_FEATURE_REG_PROPERTY),
+        U16_TO_U8S_LE(0x0007), U16_TO_U8S_LE(0x002A), // wPropertyDataType, wPropertyNameLength and PropertyName "DeviceInterfaceGUIDs\0" in UTF-16
+        'D', 0x00, 'e', 0x00, 'v', 0x00, 'i', 0x00, 'c', 0x00, 'e', 0x00, 'I', 0x00, 'n', 0x00, 't', 0x00, 'e', 0x00,
+        'r', 0x00, 'f', 0x00, 'a', 0x00, 'c', 0x00, 'e', 0x00, 'G', 0x00, 'U', 0x00, 'I', 0x00, 'D', 0x00, 's', 0x00, 0x00, 0x00,
+        U16_TO_U8S_LE(0x0050), // wPropertyDataLength
+                               //bPropertyData: “{975F44D9-0D08-43FD-8B3E-127CA8AFFF9D}”.
+        '{', 0x00, '9', 0x00, '7', 0x00, '5', 0x00, 'F', 0x00, '4', 0x00, '4', 0x00, 'D', 0x00, '9', 0x00, '-', 0x00,
+        '0', 0x00, 'D', 0x00, '0', 0x00, '8', 0x00, '-', 0x00, '4', 0x00, '3', 0x00, 'F', 0x00, 'D', 0x00, '-', 0x00,
+        '8', 0x00, 'B', 0x00, '3', 0x00, 'E', 0x00, '-', 0x00, '1', 0x00, '2', 0x00, '7', 0x00, 'C', 0x00, 'A', 0x00,
+        '8', 0x00, 'A', 0x00, 'F', 0x00, 'F', 0x00, 'F', 0x00, '9', 0x00, 'D', 0x00, '}', 0x00, 0x00, 0x00, 0x00, 0x00};
 
 #define URL "www.tinyusb.org/examples/webusb-serial"
 
@@ -41,7 +66,6 @@ static bool web_serial_connected = false;
 //------------- prototypes -------------//
 void cdc_task(void *);
 void webusb_task(void *p);
-
 
 //--------------------------------------------------------------------+
 // Device callbacks
@@ -147,6 +171,7 @@ static void echo_all(uint8_t buf[], uint32_t count)
 // Invoked when received VENDOR control request
 bool tud_vendor_control_request_cb(uint8_t rhport, tusb_control_request_t const *request)
 {
+    ESP_LOGI(TAG, "%s", __func__);
     switch (request->bRequest)
     {
     case VENDOR_REQUEST_WEBUSB:
@@ -204,18 +229,18 @@ void webusb_task(void *p)
 {
     while (1)
     {
-
-        if (web_serial_connected)
-        {
-            if (tud_vendor_available())
-            {
-                uint8_t buf[64];
-                uint32_t count = tud_vendor_read(buf, sizeof(buf));
-
+        
+        // if (web_serial_connected)
+        // {
+        //     if (tud_vendor_available())
+        //     {
+                // uint8_t buf[64]={};
+                // uint32_t count = tud_vendor_read(buf, sizeof(buf));
+                // tud_vendor_write(buf, 64);
                 // echo back to both web serial and cdc
-                echo_all(buf, count);
-            }
-        }
-    vTaskDelay(10);
+                // echo_all(buf, count);
+        //     }
+        // }
+        vTaskDelay(10);
     }
 }
