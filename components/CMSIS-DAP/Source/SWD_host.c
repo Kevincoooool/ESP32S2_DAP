@@ -7,7 +7,8 @@
 #include "DAP_config.h"
 #include "DAP.h"
 #include "debug_cm.h"
-
+// #include "cmsis_compiler.h"
+// #include "core_cm3.h"
 extern uint32_t Flash_Page_Size;
 
 #define NVIC_Addr (0xe000e000)
@@ -87,10 +88,9 @@ static uint8_t swd_transfer_retry(uint32_t req, uint32_t *data)
 
 uint8_t swd_init(void)
 {
-//    DAP_Setup();
-//  PORT_SWD_SETUP();
+   DAP_Setup();
+ PORT_SWD_SETUP();
 
-// GPIOB->BSRR = JTAG_TCK_Pin|JTAG_TMS_Pin|JTAG_nRESET_Pin;
 
     return 1;
 }
@@ -900,7 +900,7 @@ uint8_t swd_init_debug(void)
 
     // call a target dependant function:
     // some target can enter in a lock state, this function can unlock these targets
-    //target_unlock_sequence();
+    // target_unlock_sequence();
 
     if (!swd_write_dp(DP_SELECT, 0))
     {
@@ -920,7 +920,8 @@ void swd_set_target_reset(uint8_t asserted)
     /* 本文件中对此函数的使用都是先 asserted=1 调用，延时后 asserted=0 调用，为了只调用一次所以只在第二次调用此函数时执行软件复位 */
     if (asserted == 0)
     {
-       // swd_write_word((uint32_t)&SCB->AIRCR, ((0x5FA << SCB_AIRCR_VECTKEY_Pos) | (SCB->AIRCR & SCB_AIRCR_PRIGROUP_Msk) | SCB_AIRCR_SYSRESETREQ_Msk));
+        
+    //    swd_write_word((uint32_t)&SCB->AIRCR, ((0x5FA << SCB_AIRCR_VECTKEY_Pos) | (SCB->AIRCR & SCB_AIRCR_PRIGROUP_Msk) | SCB_AIRCR_SYSRESETREQ_Msk));
     }
 }
 

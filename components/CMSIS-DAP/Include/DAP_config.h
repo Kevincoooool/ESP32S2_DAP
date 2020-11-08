@@ -57,6 +57,8 @@ This information includes:
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_log.h"
+#include "SWD_host.h"
 /// Processor Clock of the Cortex-M MCU used in the Debug Unit.
 /// This value is used to calculate the SWD/JTAG clock speed.
 #define CPU_CLOCK 240000000U ///< Specifies the CPU Clock in Hz.
@@ -134,7 +136,7 @@ This information includes:
 #endif
 
 /* I made a simple header file instead of the original of CMSIS */
-//#include "cmsis_compiler.h"
+// #include "cmsis_compiler.h"
 
 /** Get Vendor ID string.
 \param str Pointer to buffer to store the string.
@@ -170,16 +172,14 @@ static inline uint8_t DAP_GetSerNumString(char *str)
 
 /* Private defines -----------------------------------------------------------*/
 // ATTENTION: DO NOT USE RTC GPIO16
-#define PIN_SWDIO 4
-#define PIN_SWCLK 5
+#define PIN_SWDIO 9
+#define PIN_SWCLK 10
 
-#define GPIO_OUTPUT_PIN_SEL ((1ULL << PIN_SWDIO) | (1ULL << PIN_SWCLK))
 
-#define PIN_TDO 13
-#define PIN_TDI 12
-#define PIN_nTRST 0 // optional
-#define PIN_nRESET 14
-#define GPIO_INPUT_PIN_SEL ((1ULL << PIN_TDO) | (1ULL << PIN_TDI) | (1ULL << PIN_nRESET))
+#define PIN_TDO 14
+#define PIN_TDI 15
+#define PIN_nTRST 16 // optional
+#define PIN_nRESET 17
 
 // LED_BUILTIN
 #define PIN_LED_CONNECTED 2
@@ -236,40 +236,24 @@ Configures the DAP Hardware I/O pins for JTAG mode:
 */
 static inline void PORT_JTAG_SETUP(void)
 {
-	//   GPIO_InitTypeDef GPIO_InitStruct = {0};
-	// __HAL_RCC_GPIOB_CLK_ENABLE();
-	// //  HAL_GPIO_WritePin(JTAG_TCK_GPIO_Port, JTAG_TCK_Pin, GPIO_PIN_SET);
-	// //  HAL_GPIO_WritePin(JTAG_TMS_GPIO_Port, JTAG_TMS_Pin, GPIO_PIN_SET);
-	// //  HAL_GPIO_WritePin(JTAG_TDI_GPIO_Port, JTAG_TDI_Pin, GPIO_PIN_SET);
-	// //  HAL_GPIO_WritePin(JTAG_nTRST_GPIO_Port, JTAG_nTRST_Pin, GPIO_PIN_SET);
-	// //  HAL_GPIO_WritePin(JTAG_nRESET_GPIO_Port, JTAG_nRESET_Pin, GPIO_PIN_SET);
-	//   GPIOB->BSRR = JTAG_TCK_Pin|JTAG_TMS_Pin|JTAG_TDI_Pin|JTAG_nTRST_Pin|JTAG_nRESET_Pin;
+	gpio_pad_select_gpio(PIN_SWCLK);
+	gpio_set_direction(PIN_SWCLK, GPIO_MODE_INPUT_OUTPUT);
+	gpio_pad_select_gpio(PIN_SWDIO);
+	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT_OUTPUT);
 
-	//   /*Configure GPIO pins : JTAG_TCK_Pin JTAG_TMS_Pin JTAG_TDI_Pin */
-	//   GPIO_InitStruct.Pin = JTAG_TCK_Pin|JTAG_TMS_Pin|JTAG_TDI_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	GPIO_OUTPUT_SET(PIN_SWCLK, 1);
+	GPIO_OUTPUT_SET(PIN_SWDIO, 1);
 
-	//   /*Configure GPIO pins : JTAG_nRESET_Pin JTAG_nTRST_Pin */
-	//   GPIO_InitStruct.Pin = JTAG_nRESET_Pin|JTAG_nTRST_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-	//   GPIO_InitStruct.Pull = GPIO_PULLUP;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	gpio_pad_select_gpio(PIN_TDI);
+	gpio_set_direction(PIN_TDI, GPIO_MODE_INPUT_OUTPUT);
+	gpio_pad_select_gpio(PIN_TDO);
+	gpio_set_direction(PIN_TDI, GPIO_MODE_INPUT_OUTPUT);
+	gpio_pad_select_gpio(PIN_nRESET);
+	gpio_set_direction(PIN_nRESET, GPIO_MODE_INPUT_OUTPUT);
 
-	//   /*Configure GPIO pin : JTAG_TDO_Pin */
-	//   GPIO_InitStruct.Pin = JTAG_TDO_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-	//     GPIO_InitStruct.Pin = LED_CONNECTED_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+	GPIO_OUTPUT_SET(PIN_TDI, 1);
+	GPIO_OUTPUT_SET(PIN_TDO, 1);
+	GPIO_OUTPUT_SET(PIN_nRESET, 1);
 }
 
 /** Setup SWD I/O pins: SWCLK, SWDIO, and nRESET.
@@ -279,13 +263,14 @@ Configures the DAP Hardware I/O pins for Serial Wire Debug (SWD) mode:
 */
 static inline void PORT_SWD_SETUP(void)
 {
+	ESP_LOGI("SWD_DELAY", "PORT_SWD_SETUP");
 	gpio_pad_select_gpio(PIN_SWCLK);
 	gpio_set_direction(PIN_SWCLK, GPIO_MODE_INPUT_OUTPUT);
 	gpio_pad_select_gpio(PIN_SWDIO);
 	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT_OUTPUT);
 
-	gpio_set_level(PIN_SWCLK, 1);
-	gpio_set_level(PIN_SWDIO, 1);
+	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWCLK));
+	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
 
 	gpio_pad_select_gpio(PIN_TDI);
 	gpio_set_direction(PIN_TDI, GPIO_MODE_INPUT_OUTPUT);
@@ -293,40 +278,10 @@ static inline void PORT_SWD_SETUP(void)
 	gpio_set_direction(PIN_TDI, GPIO_MODE_INPUT_OUTPUT);
 	gpio_pad_select_gpio(PIN_nRESET);
 	gpio_set_direction(PIN_nRESET, GPIO_MODE_INPUT_OUTPUT);
-	
-	gpio_set_level(PIN_TDI, 1);
-	gpio_set_level(PIN_TDO, 1);
-	gpio_set_level(PIN_nRESET, 1);
-	//   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-	// //  HAL_GPIO_WritePin(JTAG_TCK_GPIO_Port, JTAG_TCK_Pin, GPIO_PIN_SET);
-	// //  HAL_GPIO_WritePin(JTAG_TMS_GPIO_Port, JTAG_TMS_Pin, GPIO_PIN_SET);
-	// //  HAL_GPIO_WritePin(JTAG_nRESET_GPIO_Port, JTAG_nRESET_Pin, GPIO_PIN_SET);
-	//   GPIOB->BSRR = JTAG_TCK_Pin|JTAG_TMS_Pin|JTAG_nRESET_Pin;
-
-	//   GPIO_InitStruct.Pin = JTAG_TMS_Pin|JTAG_TCK_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-	//   GPIO_InitStruct.Pin = JTAG_nRESET_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-	//   GPIO_InitStruct.Pull = GPIO_PULLUP;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(JTAG_nRESET_GPIO_Port, &GPIO_InitStruct);
-
-	//   GPIO_InitStruct.Pin = JTAG_TDI_Pin|JTAG_TDO_Pin|JTAG_nTRST_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-	//   GPIO_InitStruct.Pin = LED_CONNECTED_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-	//   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+	GPIO_OUTPUT_SET(PIN_TDI, 1);
+	GPIO_OUTPUT_SET(PIN_TDO, 1);
+	GPIO_OUTPUT_SET(PIN_nRESET, 1);
 }
 
 /** Disable JTAG/SWD I/O Pins.
@@ -335,14 +290,17 @@ Disables the DAP Hardware I/O pins which configures:
 */
 static inline void PORT_OFF(void)
 {
-	//   GPIO_InitTypeDef GPIO_InitStruct = {0};
+	gpio_pad_select_gpio(PIN_SWCLK);
+	gpio_set_direction(PIN_SWCLK, GPIO_MODE_INPUT);
+	gpio_pad_select_gpio(PIN_SWDIO);
+	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT);
 
-	//   GPIO_InitStruct.Pin = JTAG_TMS_Pin|JTAG_TCK_Pin|JTAG_TDI_Pin|
-	//                         JTAG_TDO_Pin|JTAG_nTRST_Pin|JTAG_nRESET_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	//   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+	gpio_pad_select_gpio(PIN_TDI);
+	gpio_set_direction(PIN_TDI, GPIO_MODE_INPUT);
+	gpio_pad_select_gpio(PIN_TDO);
+	gpio_set_direction(PIN_TDI, GPIO_MODE_INPUT);
+	gpio_pad_select_gpio(PIN_nRESET);
+	gpio_set_direction(PIN_nRESET, GPIO_MODE_INPUT);
 }
 
 // SWCLK/TCK I/O pin -------------------------------------
@@ -352,8 +310,8 @@ static inline void PORT_OFF(void)
 */
 static inline uint32_t PIN_SWCLK_TCK_IN(void)
 {
-	return GPIO_INPUT_GET(PIN_SWCLK) ? 1 : 0; //
-											  //  return (uint32_t)(JTAG_TCK_GPIO_Port->ODR & JTAG_TCK_Pin ? 1:0);
+	// return (uint32_t)READ_PERI_REG(GPIO_PIN10_REG)? 1 : 0;
+	return (uint32_t)GPIO_INPUT_GET(PIN_SWCLK) ? 1 : 0; 
 }
 
 /** SWCLK/TCK I/O pin: Set Output to High.
@@ -361,8 +319,8 @@ Set the SWCLK/TCK DAP hardware I/O pin to high level.
 */
 static inline void PIN_SWCLK_TCK_SET(void)
 {
-	GPIO_OUTPUT_SET(PIN_SWCLK, 1);
-	//  JTAG_TCK_GPIO_Port->BSRR = JTAG_TCK_Pin;
+	//GPIO_OUTPUT_SET(PIN_SWCLK, 1);
+	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWCLK));
 }
 
 /** SWCLK/TCK I/O pin: Set Output to Low.
@@ -370,8 +328,8 @@ Set the SWCLK/TCK DAP hardware I/O pin to low level.
 */
 static inline void PIN_SWCLK_TCK_CLR(void)
 {
-	GPIO_OUTPUT_SET(PIN_SWCLK, 0);
-	//  JTAG_TCK_GPIO_Port->BRR = JTAG_TCK_Pin;
+	// GPIO_OUTPUT_SET(PIN_SWCLK, 0);
+	WRITE_PERI_REG(GPIO_OUT_W1TC_REG, (0x1 << PIN_SWCLK));
 }
 
 // SWDIO/TMS Pin I/O --------------------------------------
@@ -381,8 +339,7 @@ static inline void PIN_SWCLK_TCK_CLR(void)
 */
 static inline uint32_t PIN_SWDIO_TMS_IN(void)
 {
-	return GPIO_INPUT_GET(PIN_SWDIO) ? 1 : 0;
-	//   return (uint32_t)(JTAG_TMS_GPIO_Port->ODR & JTAG_TMS_Pin ? 1:0);
+	return (uint32_t)GPIO_INPUT_GET(PIN_SWDIO) ? 1 : 0;
 }
 
 /** SWDIO/TMS I/O pin: Set Output to High.
@@ -390,8 +347,8 @@ Set the SWDIO/TMS DAP hardware I/O pin to high level.
 */
 static inline void PIN_SWDIO_TMS_SET(void)
 {
-	GPIO_OUTPUT_SET(PIN_SWDIO, 1);
-	//   JTAG_TMS_GPIO_Port->BSRR = JTAG_TMS_Pin;
+	// GPIO_OUTPUT_SET(PIN_SWDIO, 1);
+	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
 }
 
 /** SWDIO/TMS I/O pin: Set Output to Low.
@@ -399,17 +356,18 @@ Set the SWDIO/TMS DAP hardware I/O pin to low level.
 */
 static inline void PIN_SWDIO_TMS_CLR(void)
 {
-	GPIO_OUTPUT_SET(PIN_SWDIO, 0);
-	//   JTAG_TMS_GPIO_Port->BRR = JTAG_TMS_Pin;
+
+	WRITE_PERI_REG(GPIO_OUT_W1TC_REG, (0x1 << PIN_SWDIO));
 }
 
 /** SWDIO I/O pin: Get Input (used in SWD mode only).
 \return Current status of the SWDIO DAP hardware I/O pin.
 */
+
 static inline uint32_t PIN_SWDIO_IN(void)
 {
-	return GPIO_INPUT_GET(PIN_SWDIO) ? 1 : 0;
-	//   return (uint32_t)(JTAG_TMS_GPIO_Port->IDR & JTAG_TMS_Pin ? 1:0);
+	// return (uint32_t)READ_PERI_REG(GPIO_FUNC9_IN_SEL_CFG_REG)? 1 : 0;
+	return (uint32_t)GPIO_INPUT_GET(PIN_SWDIO) ? 1 : 0;
 }
 
 /** SWDIO I/O pin: Set Output (used in SWD mode only).
@@ -424,13 +382,13 @@ static inline void PIN_SWDIO_OUT(uint32_t bit)
 	*/
 	if ((bit & 1U) == 1)
 	{
-		GPIO_OUTPUT_SET(PIN_SWDIO, 1);
-		// JTAG_TMS_GPIO_Port->BSRR = JTAG_TMS_Pin;
+		WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
+
 	}
 	else
 	{
-		GPIO_OUTPUT_SET(PIN_SWDIO, 0);
-		// JTAG_TMS_GPIO_Port->BRR  = JTAG_TMS_Pin;
+		WRITE_PERI_REG(GPIO_OUT_W1TC_REG, (0x1 << PIN_SWDIO));
+
 	}
 }
 
@@ -441,12 +399,9 @@ called prior \ref PIN_SWDIO_OUT function calls.
 static inline void PIN_SWDIO_OUT_ENABLE(void)
 {
 
-	//   GPIO_InitTypeDef GPIO_InitStruct = {0};
-	//   GPIO_InitStruct.Pin = JTAG_TMS_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	//   HAL_GPIO_Init(JTAG_TMS_GPIO_Port, &GPIO_InitStruct);
+	gpio_pad_select_gpio(PIN_SWDIO);
+	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT_OUTPUT);
+	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
 }
 
 /** SWDIO I/O pin: Switch to Input mode (used in SWD mode only).
@@ -455,13 +410,11 @@ called prior \ref PIN_SWDIO_IN function calls.
 */
 static inline void PIN_SWDIO_OUT_DISABLE(void)
 {
-	//   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-	//   GPIO_InitStruct.Pin = JTAG_TMS_Pin;
-	//   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	//   GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	//   HAL_GPIO_Init(JTAG_TMS_GPIO_Port, &GPIO_InitStruct);
+	gpio_pad_select_gpio(PIN_SWDIO);
+	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT);
+
+	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
 }
 
 // TDI Pin I/O ---------------------------------------------
@@ -471,8 +424,8 @@ static inline void PIN_SWDIO_OUT_DISABLE(void)
 */
 static inline uint32_t PIN_TDI_IN(void)
 {
-	return GPIO_INPUT_GET(PIN_TDI) ? 1 : 0;
-	//   return (uint32_t)(JTAG_TDI_GPIO_Port->ODR & JTAG_TDI_Pin ? 1:0);
+	// return (uint32_t)READ_PERI_REG(GPIO_IN_REG&(0x1 << PIN_TDI))? 1 : 0;
+	return (uint32_t)GPIO_INPUT_GET(PIN_TDI) ? 1 : 0;
 }
 
 /** TDI I/O pin: Set Output.
@@ -483,12 +436,14 @@ static inline void PIN_TDI_OUT(uint32_t bit)
 
 	if ((bit & 1U) == 1)
 	{
-		GPIO_OUTPUT_SET(PIN_TDI, 1);
+		WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_TDI));
+		// GPIO_OUTPUT_SET(PIN_TDI, 1);
 		// JTAG_TDI_GPIO_Port->BSRR = JTAG_TDI_Pin;
 	}
 	else
 	{
-		GPIO_OUTPUT_SET(PIN_TDI, 0);
+		WRITE_PERI_REG(GPIO_OUT_W1TC_REG, (0x1 << PIN_TDI));
+		// GPIO_OUTPUT_SET(PIN_TDI, 0);
 		// JTAG_TDI_GPIO_Port->BRR = JTAG_TDI_Pin;
 	}
 }
@@ -500,8 +455,9 @@ static inline void PIN_TDI_OUT(uint32_t bit)
 */
 static inline uint32_t PIN_TDO_IN(void)
 {
-	return GPIO_INPUT_GET(PIN_TDO) ? 1 : 0;
-				 //   return (uint32_t)(JTAG_TDO_GPIO_Port->IDR & JTAG_TDO_Pin ? 1:0);
+	return (uint32_t)GPIO_INPUT_GET(PIN_TDO) ? 1 : 0;
+	// return (uint32_t)READ_PERI_REG(GPIO_IN_REG&(0x1 << PIN_TDO))? 1 : 0;
+	//   return (uint32_t)(JTAG_TDO_GPIO_Port->IDR & JTAG_TDO_Pin ? 1:0);
 }
 
 // nTRST Pin I/O -------------------------------------------
@@ -543,29 +499,23 @@ static inline uint32_t PIN_nRESET_IN(void)
 */
 static inline void PIN_nRESET_OUT(uint32_t bit)
 {
-	//   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-	//   if ((bit & 1U) == 1) {
-	//     JTAG_nRESET_GPIO_Port->BSRR = JTAG_nRESET_Pin;
+	  if ((bit & 1U) == 1) {
 
-	//     GPIO_InitStruct.Pin = JTAG_nRESET_Pin;
-	//     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	//     GPIO_InitStruct.Pull = GPIO_NOPULL;
-	//     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	//     HAL_GPIO_Init(JTAG_nRESET_GPIO_Port, &GPIO_InitStruct);
-	//   } else {
-	//     JTAG_nRESET_GPIO_Port->BRR = JTAG_nRESET_Pin;
+	  } else {
 
-	//     GPIO_InitStruct.Pin = JTAG_nRESET_Pin;
-	//     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-	//     GPIO_InitStruct.Pull = GPIO_PULLUP;
-	//     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	//     HAL_GPIO_Init(JTAG_nRESET_GPIO_Port, &GPIO_InitStruct);
+		if(swd_init_debug())
+		{
+			ESP_LOGI("RST","Connect");
+		}
+		else
+		{
+			ESP_LOGI("RST","Disconnect");
+		}
 
-	// 	swd_init_debug();
-	// 	uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
-	// 	swd_write_memory(0xE000ED0C,(uint8_t*)&swd_mem_write_data,4);
-	//   }
+		// uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
+		// swd_write_memory(0xE000ED0C,(uint8_t*)&swd_mem_write_data,4);
+	  }
 }
 
 ///@}
@@ -636,9 +586,7 @@ default, the DWT timer is used.  The frequency of this timer is configured with 
 // }
 static inline uint32_t TIMESTAMP_GET(void)
 {
-	// FRC1 is a 23-bit countdown timer
-	//  return (0x7FFFFF - (frc1.count.data));
-	return (0U);
+	return xTaskGetTickCount();
 }
 ///@}
 
@@ -661,16 +609,14 @@ Status LEDs. In detail the operation of Hardware I/O and LED pins are enabled an
 */
 static inline void DAP_SETUP(void)
 {
-	// __HAL_RCC_GPIOB_CLK_ENABLE();
-	// __HAL_RCC_GPIOC_CLK_ENABLE();
+
 	PORT_JTAG_SETUP();
 	PORT_SWD_SETUP();
-	// gpio_set_direction(PIN_SWCLK, GPIO_MODE_DEF_INPUT);
-	// gpio_set_direction(PIN_SWDIO, GPIO_MODE_DEF_INPUT);	 //
-	// gpio_set_direction(PIN_nRESET, GPIO_MODE_DEF_INPUT); //
-	// gpio_set_direction(PIN_TDI, GPIO_MODE_DEF_INPUT);
-	// gpio_set_direction(PIN_TDO, GPIO_MODE_DEF_INPUT);
-
+	gpio_set_direction(PIN_SWCLK, GPIO_MODE_INPUT_OUTPUT);
+	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT_OUTPUT);	//
+	gpio_set_direction(PIN_nRESET, GPIO_MODE_INPUT_OUTPUT); //
+	gpio_set_direction(PIN_TDI, GPIO_MODE_INPUT_OUTPUT);
+	gpio_set_direction(PIN_TDO, GPIO_MODE_INPUT_OUTPUT);
 	// Configure: LED as output (turned off)
 	gpio_set_direction(PIN_LED_CONNECTED, GPIO_MODE_DEF_OUTPUT);
 	LED_CONNECTED_OUT(0);

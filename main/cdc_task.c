@@ -24,6 +24,7 @@ void cdc_task(void *params)
 	// RTOS forever loop
 	while (1)
 	{
+		#if CFG_TUD_CDC
 		if (tud_cdc_connected())
 		{
 			
@@ -48,12 +49,12 @@ void cdc_task(void *params)
 				tud_cdc_write_flush();
 			}
 		}
-
+#endif
 		// For ESP32-S2 this delay is essential to allow idle how to run and reset wdt
 		vTaskDelay(pdMS_TO_TICKS(10));
 	}
 }
-
+#if CFG_TUD_CDC
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
 	if (dtr && rts)
@@ -61,3 +62,4 @@ void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 		tud_cdc_write_str("Welcome to tinyUSB CDC example!!!\r\n");
 	}
 }
+#endif

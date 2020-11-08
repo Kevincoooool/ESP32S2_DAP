@@ -101,27 +101,41 @@ menu "TinyUSB"
             depends on USB_HID_ENABLED
             help
                 Specify name of the HID device
+        config USB_DESC_VENDOR_STRING
+            string "VENDOR Device String"
+            default "Espressif VENDOR Device"
+            depends on USB_VENDOR_ENABLED
+            help
+                Specify name of the VENDOR device
 
     endmenu
 
     config USB_CDC_ENABLED
         bool "Enable USB Serial (CDC) TinyUSB driver"
-        default n
+        default y
         depends on USB_ENABLED
         help
             Enable USB Serial (CDC) TinyUSB driver.
 	config USB_HID_ENABLED
-        bool "Enable USB Serial (HID) TinyUSB driver"
-        default n
+        bool "Enable USB (HID) TinyUSB driver"
+        default y
         depends on USB_ENABLED
         help
-            Enable USB Serial (HID) TinyUSB driver.
+            Enable USB (HID) TinyUSB driver.
 	config USB_MSC_ENABLED
-        bool "Enable USB Serial (MSC) TinyUSB driver"
-        default n
+        bool "Enable USB (MSC) TinyUSB driver"
+        default y
         depends on USB_ENABLED
         help
-            Enable USB Serial (MSC) TinyUSB driver.
+            Enable USB (MSC) TinyUSB driver.
+    
+     config USB_VENDOR_ENABLED
+        bool "Vendor class TinyUSB driver"
+        default y
+        depends on USB_ENABLED
+        help
+            Enable USB vendor TinyUSB driver. Currently used by webusb driver.
+
 	config USB_HID_BUFSIZE
 		int "HID BUFFER size "
         default 64
