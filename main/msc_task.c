@@ -16,49 +16,14 @@
 #include "tinyusb.h"
 #include "msc_task.h"
 #include "esp_partition.h"
+static bool idf_flash;
 
+static uint32_t _lba = 0;
+static long old_millis;
+static uint32_t _offset = 0;
 static const char *TAG = "MSC_TASK";
 const esp_partition_t *find_partition = NULL;
-void msc_task(void *params)
-{
-	(void)params;
-
-	const char* data = "Test read amd write partition1122";
-    uint8_t dest_data[1024] = {0};
-    
-    find_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
-    if(find_partition == NULL){
-	    printf("No partition found!\r\n");
-	    return -1;
-    }
-
-    printf("Erase custom partition\r\n");
-    if (esp_partition_erase_range(find_partition, 0, 0x1000) != ESP_OK) {
-	    printf("Erase partition error");
-	    return -1;
-    }
-
-    printf("Write data to custom partition\r\n");
-    if (esp_partition_write(find_partition, 0, data, strlen(data) + 1) != ESP_OK) {   // incude '\0'
-	    printf("Write partition data error");
-	    return -1;
-    }
-
-    printf("Read data from custom partition\r\n");
-    if (esp_partition_read(find_partition, 0, dest_data, 1024) != ESP_OK) {
-	    printf("Read partition data error");
-	    return -1;
-    }
-
-    printf("Receive data: %s\r\n", (char*)dest_data);
-	// RTOS forever loop
-	while (1)
-	{
-		
-		// For ESP32-S2 this delay is essential to allow idle how to run and reset wdt
-		vTaskDelay(pdMS_TO_TICKS(50));
-	}
-}
+uint8_t *msc_disk;
 #define README_CONTENTS \
 	"This is tinyusb's MassStorage Class demo.\r\n\r\n\
 If you find any bugs or get any questions, feel free to file an\r\n\
@@ -66,14 +31,14 @@ issue at github.com/hathach/tinyusb11"
 
 enum
 {
-	DISK_BLOCK_NUM = 160, // 8KB is the smallest size that windows allow to mount
+	DISK_BLOCK_NUM = 50, // 8KB is the smallest size that windows allow to mount
 	DISK_BLOCK_SIZE = 512
 };
 
 #ifdef CFG_EXAMPLE_MSC_READONLY
 const
 #endif
-	uint8_t msc_disk[DISK_BLOCK_NUM][DISK_BLOCK_SIZE] =
+	uint8_t _msc_disk[50][DISK_BLOCK_SIZE] =
 		{
 			//------------- Block0: Boot Sector -------------//
 			// byte_per_sector    = DISK_BLOCK_SIZE; fat12_sector_num_16  = DISK_BLOCK_NUM;
@@ -141,6 +106,77 @@ const
 			//------------- Block3: Readme Content -------------//
 			README_CONTENTS};
 
+void msc_task(void *params)
+{
+	(void)params;
+
+	const char *data = "Test read amd write partition1122";
+	uint8_t dest_data[1024] = {0};
+
+	find_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "storage");
+	ESP_LOGI("", "TYPE => %d", find_partition->type);
+	ESP_LOGI("", "SUBTYPE => %02x", find_partition->subtype);
+	ESP_LOGI("", "ADDRESS => %x", find_partition->address);
+	ESP_LOGI("", "SIZE => %x", find_partition->size);
+	if (find_partition == NULL)
+	{
+		printf("No partition found!\r\n");
+		return -1;
+	}
+	msc_disk = (uint8_t *)heap_caps_calloc(1, DISK_BLOCK_SIZE * DISK_BLOCK_NUM, MALLOC_CAP_32BIT);
+	if (msc_disk == NULL)
+		return false;
+	memcpy(msc_disk, _msc_disk, sizeof(_msc_disk));
+	msc_disk[20] = (uint8_t)(find_partition->size / DISK_BLOCK_SIZE >> 8);
+	msc_disk[19] = (uint8_t)(find_partition->size / DISK_BLOCK_SIZE & 0xff);
+	// ESP_LOGI("TAG", "Erase custom partition\r\n");
+	// if (esp_partition_erase_range(find_partition, 0, find_partition->size) != ESP_OK)
+	// {
+	// 	printf("Erase partition error");
+	// 	return -1;
+	// }
+
+	// ESP_LOGI("TAG", "Write data to custom partition\r\n");
+	// if (esp_partition_write(find_partition, 0, data, strlen(data) + 1) != ESP_OK)
+	// { // incude '\0'
+	// 	printf("Write partition data error");
+	// 	return -1;
+	// }
+
+	ESP_LOGI("TAG", "Read data from custom partition\r\n");
+	if (esp_partition_read(find_partition, 0, dest_data, 1024) != ESP_OK)
+	{
+		printf("Read partition data error");
+		return -1;
+	}
+
+	ESP_LOGI("TAG", "Receive data: %s\r\n", (char *)dest_data);
+	// RTOS forever loop
+	while (1)
+	{
+		// ESP_LOGI(TAG,"Erase custom partition\r\n");
+		// For ESP32-S2 this delay is essential to allow idle how to run and reset wdt
+		vTaskDelay(pdMS_TO_TICKS(50));
+	}
+}
+
+static void ticker_task(void *p)
+{
+	while (1)
+	{
+		if (xTaskGetTickCount() - old_millis > 1000)
+		{
+
+			//   esp_err_t err = esp_ota_set_boot_partition(find_partition);
+			//   if(err)
+			//     ESP_LOGE("", "BOOT ERR => %x [%d]", err, _offset);
+
+			esp_restart();
+		}
+		vTaskDelay(pdMS_TO_TICKS(50));
+	}
+}
+#if CFG_TUD_MSC
 // Invoked when received SCSI_CMD_INQUIRY
 // Application fill vendor id, product id and revision with string up to 8, 16, 4 characters respectively
 void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16], uint8_t product_rev[4])
@@ -174,8 +210,16 @@ void tud_msc_capacity_cb(uint8_t lun, uint32_t *block_count, uint16_t *block_siz
 	(void)lun;
 	ESP_LOGD(__func__, "");
 
-	*block_count = DISK_BLOCK_NUM;
-	*block_size = DISK_BLOCK_SIZE;
+	// if (find_partition == NULL)
+	// {
+	// 	*block_count = DISK_BLOCK_NUM;
+	// 	*block_size = DISK_BLOCK_SIZE;
+	// }
+	// else
+	// {
+		*block_count = find_partition->size / DISK_BLOCK_SIZE;
+		*block_size = DISK_BLOCK_SIZE;
+	// }
 }
 
 // Invoked when received Start Stop Unit command
@@ -208,10 +252,18 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void *buff
 {
 	(void)lun;
 	ESP_LOGD(__func__, "");
+	esp_err_t err = 0;
+	if (find_partition == NULL || lba < 50) // first 50 lba is RAM disk, 50+ its ota partition
+	{
+		uint8_t *addr = &msc_disk[lba * 512] + offset;
+		memcpy(buffer, addr, bufsize);
+	}
+	else
+	{
+		err |= esp_partition_read(find_partition, (lba * 512) + offset - 512, buffer, bufsize);
+	}
+	ESP_LOGD("", "LBA => %d, off => %d = %d, err = %d[%d]", lba, offset, (lba * 512) + offset, err, bufsize);
 
-	uint8_t const *addr = msc_disk[lba]+ offset;
-	memcpy(buffer, addr, bufsize);
-// esp_partition_read(find_partition, addr, buffer, bufsize);
 	return bufsize;
 }
 
@@ -221,18 +273,34 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t *
 {
 	(void)lun;
 	ESP_LOGD(__func__, "");
+	esp_err_t err = 0;
+	(void)lun;
+	if (buffer[0] == 0xe9 && !idf_flash)
+	{ // we presume that we are having beginning of esp32 binary file when we see magic number at beginning of buffer
+		ESP_LOGI("", "start flash");
 
-#ifndef CFG_EXAMPLE_MSC_READONLY
-	uint8_t *addr = msc_disk[lba] + offset;
-	// uint8_t *addr =  offset;
-	memcpy(addr, buffer, bufsize);
-	// esp_partition_write(find_partition, addr, buffer, bufsize);
-#else
-	(void)lba;
-	(void)offset;
-	(void)buffer;
-#endif
+		idf_flash = true;
+		_lba = lba;
+		esp_partition_erase_range(find_partition, 0x0, find_partition->size);
+		old_millis = xTaskGetTickCount();
+	}
+	if (!idf_flash)
+	{
+		uint8_t *addr = &msc_disk[lba * 512] + offset;
+		memcpy(addr, buffer, bufsize);
+	}
+	else
+	{
+		if (lba < _lba)
+		{
+			// ignore LBA that is lower than start update LBA, it is most likely FAT update
+			return bufsize;
+		}
+		err = esp_partition_write(find_partition, _offset, buffer, bufsize);
+		_offset += bufsize;
+	}
 
+	ESP_LOGD("", "LBA => %d, off => %d = %d, err = %d[%d]", lba, offset, (lba * 512) + offset, err, bufsize);
 	return bufsize;
 }
 
@@ -284,3 +352,4 @@ int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void *buffer, u
 
 	return resplen;
 }
+#endif

@@ -1,5 +1,5 @@
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef ERRORT_H
+#define ERRORT_H
 
 
 // Keep in sync with the lists error_message and error_type
@@ -24,7 +24,7 @@ typedef enum
     // Add new values here
 
     ERROR_COUNT
-} error_t;
+} error_tt;
 
 
 typedef unsigned char error_type_t;
@@ -37,9 +37,9 @@ typedef unsigned char error_type_t;
 #define ERROR_TYPE_MASK 		0xF
 
 
-const char *error_get_string(error_t error);
+const char *error_get_string(error_tt error);
 
-error_type_t error_get_type(error_t error);
+error_type_t error_get_type(error_tt error);
 
 
 #endif

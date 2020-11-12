@@ -7,4 +7,6 @@ idf_component_register(SRCS
 "webusb_task.c"
 "cdc_task.c"
 "msc_task.c" 
+"my_tcp.c" 
+
 INCLUDE_DIRS . ${COMPONENT_DIR} . ${PROJECT_DIR}/components/CMSIS-DAP/Include)

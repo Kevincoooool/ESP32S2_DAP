@@ -6,7 +6,7 @@
 #include "SWD_opt.h"
 uint8_t Select_algo = 1;
 
-error_t target_opt_init(void)
+error_tt target_opt_init(void)
 {
 	if (0 == swd_set_target_state_hw(RESET_PROGRAM))
 	{
@@ -27,7 +27,7 @@ error_t target_opt_init(void)
 	return ERROR_SUCCESS;
 }
 
-error_t target_opt_uninit(void)
+error_tt target_opt_uninit(void)
 {
 	if (0 == swd_flash_syscall_exec(&STM32_ALGO[Select_algo].algo.sys_call_s, STM32_ALGO[Select_algo].algo.uninit, 0, 0, 0, 0))
 	{
@@ -36,7 +36,7 @@ error_t target_opt_uninit(void)
 	return ERROR_SUCCESS;
 }
 
-error_t target_opt_program_page(uint32_t addr, const uint8_t *buf, uint32_t size)
+error_tt target_opt_program_page(uint32_t addr, const uint8_t *buf, uint32_t size)
 {
 	// Write page to buffer
 	if (!swd_write_memory(STM32_ALGO[Select_algo].algo.program_buffer, (uint8_t *)buf, size))
@@ -57,7 +57,7 @@ error_t target_opt_program_page(uint32_t addr, const uint8_t *buf, uint32_t size
 	return ERROR_SUCCESS;
 }
 
-error_t target_opt_erase_sector(uint32_t addr)
+error_tt target_opt_erase_sector(uint32_t addr)
 {
 	if (0 == swd_flash_syscall_exec(&STM32_ALGO[Select_algo].algo.sys_call_s, STM32_ALGO[Select_algo].algo.erase_sector, addr, 0, 0, 0))
 	{
@@ -67,9 +67,9 @@ error_t target_opt_erase_sector(uint32_t addr)
 	return ERROR_SUCCESS;
 }
 
-error_t target_opt_erase_chip(void)
+error_tt target_opt_erase_chip(void)
 {
-	error_t status = ERROR_SUCCESS;
+	error_tt status = ERROR_SUCCESS;
 
 	if (0 == swd_flash_syscall_exec(&STM32_ALGO[Select_algo].algo.sys_call_s, STM32_ALGO[Select_algo].algo.erase_chip, 0, 0, 0, 0))
 	{

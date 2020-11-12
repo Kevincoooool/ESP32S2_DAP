@@ -69,7 +69,7 @@ This information includes:
 /// require 2 processor cycles for a I/O Port Write operation.  If the Debug Unit uses
 /// a Cortex-M0+ processor with high-speed peripheral I/O only 1 processor cycle might be
 /// required.
-#define IO_PORT_WRITE_CYCLES 2U ///< I/O Cycles: 2=default, 1=Cortex-M0+ fast I/0.
+#define IO_PORT_WRITE_CYCLES 1U ///< I/O Cycles: 2=default, 1=Cortex-M0+ fast I/0.
 
 /// Indicate that Serial Wire Debug (SWD) communication mode is available at the Debug Access Port.
 /// This information is returned by the command \ref DAP_Info as part of <b>Capabilities</b>.
@@ -90,7 +90,7 @@ This information includes:
 /// Default communication speed on the Debug Access Port for SWD and JTAG mode.
 /// Used to initialize the default SWD/JTAG clock frequency.
 /// The command \ref DAP_SWJ_Clock can be used to overwrite this default setting.
-#define DAP_DEFAULT_SWJ_CLOCK 1000000U ///< Default SWD/JTAG clock frequency in Hz.
+#define DAP_DEFAULT_SWJ_CLOCK 4000000U ///< Default SWD/JTAG clock frequency in Hz.
 
 /// Maximum Package Size for Command and Response data.
 /// This configuration settings is used to optimize the communication performance with the
@@ -399,9 +399,10 @@ called prior \ref PIN_SWDIO_OUT function calls.
 static inline void PIN_SWDIO_OUT_ENABLE(void)
 {
 
-	gpio_pad_select_gpio(PIN_SWDIO);
-	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT_OUTPUT);
-	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
+	// gpio_pad_select_gpio(PIN_SWDIO);
+	gpio_set_direction(PIN_SWDIO, GPIO_MODE_OUTPUT);
+	// gpio_output_enable(PIN_SWDIO);
+	// WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
 }
 
 /** SWDIO I/O pin: Switch to Input mode (used in SWD mode only).
@@ -411,10 +412,10 @@ called prior \ref PIN_SWDIO_IN function calls.
 static inline void PIN_SWDIO_OUT_DISABLE(void)
 {
 
-	gpio_pad_select_gpio(PIN_SWDIO);
+	// gpio_pad_select_gpio(PIN_SWDIO);
 	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT);
-
-	WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
+// gpio_output_enable(PIN_SWDIO);
+	// WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
 }
 
 // TDI Pin I/O ---------------------------------------------
@@ -501,7 +502,17 @@ static inline void PIN_nRESET_OUT(uint32_t bit)
 {
 
 	  if ((bit & 1U) == 1) {
+if(swd_init_debug())
+		{
+			ESP_LOGI("RST","Connect");
+		}
+		else
+		{
+			ESP_LOGI("RST","Disconnect");
+		}
 
+		uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
+		swd_write_memory(0xE000ED0C,(uint8_t*)&swd_mem_write_data,4);
 	  } else {
 
 		if(swd_init_debug())
@@ -513,8 +524,8 @@ static inline void PIN_nRESET_OUT(uint32_t bit)
 			ESP_LOGI("RST","Disconnect");
 		}
 
-		// uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
-		// swd_write_memory(0xE000ED0C,(uint8_t*)&swd_mem_write_data,4);
+		uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
+		swd_write_memory(0xE000ED0C,(uint8_t*)&swd_mem_write_data,4);
 	  }
 }
 

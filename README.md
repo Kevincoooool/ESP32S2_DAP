@@ -1,12 +1,37 @@
 | Supported Targets | ESP32-S2 |
 | ----------------- | -------- |
 
-# TinyUSB Sample CDC
+# ESP32S2 DAP
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+此例子需要先把tinyusb文件夹替换esp-idf/components/tinyusb下
+*注意S2的USB端点fifo只有5个，0、1、2、3、4，所以将0x85分给cdc才能正常收发
+#define EPNUM_MSC 0x01
+#define EPNUM_VENDOR 0x03
+```bash
+uint8_t const desc_configuration[] = {
+    // interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
 
-This example is demonstrating how to set up ESP32-S2 chip to work as a CDC USB Device. You can specify a manufacturer, device's name, ID and other USB-devices parameters responsible for identification by host.
+#   if CFG_TUD_CDC
+    // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, 0x85, 8, 0x04, 0x84, TUD_OPT_HIGH_SPEED ? 512 : 64),
+#   endif
+#   if CFG_TUD_MSC
+    // Interface number, string index, EP Out & EP In address, EP size
+    TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC, 0x80 | EPNUM_MSC, TUD_OPT_HIGH_SPEED ? 512 : 64), // highspeed 512
+#   endif
+#   if CFG_TUD_HID
+    // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
+    TUD_HID_DESCRIPTOR(ITF_NUM_HID, 6, HID_PROTOCOL_NONE, sizeof(desc_hid_report), 0x82, 64, 1),
+#   endif
+#   if CFG_TUD_VENDOR
+    // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
+    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, 7, EPNUM_VENDOR, 0x80|EPNUM_VENDOR, TUD_OPT_HIGH_SPEED ? 512 : 64),
+#   endif
 
+};
+
+```
 
 As a USB stack, a TinyUSB component is used.
 
@@ -28,9 +53,7 @@ If you want to set up the desctiptor using Menuconfig UI:
 
 Build the project and flash it to the board, then run monitor tool to view serial output:
 
-```bash
-idf.py -p PORT flash monitor
-```
+
 
 (Replace PORT with the name of the serial port to use.)
 
@@ -49,13 +72,14 @@ I (327) TUSB:descriptors_control: Setting of a descriptor:
 .bDeviceSubClass    = 2,
 .bDeviceProtocol    = 1,
 .bMaxPacketSize0    = 64,
-.idVendor           = 0x0000303a,
-.idProduct          = 0x00003000,
-.bcdDevice          = 0x00000100,
+.idVendor           = 0x00000483,
+.idProduct          = 0x00000011,
+.bcdDevice          = 0x00000210,
 .iManufacturer      = 0x01,
 .iProduct           = 0x02,
 .iSerialNumber      = 0x03,
 .bNumConfigurations = 0x01
+
 
 I (357) example: USB initialization DONE
 I (367) example: USB task started

@@ -75,7 +75,7 @@ static error_type_t error_type[] =
     ERROR_TYPE_TARGET,
 };
 
-const char *error_get_string(error_t error)
+const char *error_get_string(error_tt error)
 {
     const char *msg = 0;
 
@@ -87,7 +87,7 @@ const char *error_get_string(error_t error)
     return msg;
 }
 
-error_type_t error_get_type(error_t error)
+error_type_t error_get_type(error_tt error)
 {
     error_type_t type = ERROR_TYPE_INTERNAL;
 
