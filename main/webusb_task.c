@@ -158,8 +158,8 @@ bool tud_vendor_control_complete_cb(uint8_t rhport, tusb_control_request_t const
 	// nothing to do
 	return true;
 }
-uint8_t WINUSB_Request[64 ]={0};	 // Request  Buffer
-uint8_t WINUSB_Response[64]={0}; // Response Buffer
+uint8_t WINUSB_Request[64] = {0};  // Request  Buffer
+uint8_t WINUSB_Response[64] = {0}; // Response Buffer
 uint8_t WINUSB_data = 0;
 int WINUSB_len;
 void webusb_task(void *p)
@@ -173,12 +173,11 @@ void webusb_task(void *p)
 		{
 
 			time = xTaskGetTickCount();
-			
+
 			uint32_t count = tud_vendor_read(WINUSB_Request, 64);
 			DAP_ProcessCommand(WINUSB_Request, WINUSB_Response);
 			tud_vendor_write(WINUSB_Response, 63);
-			ESP_LOGI(TAG, "%d %d", count,xTaskGetTickCount() - time);
-		
+			ESP_LOGI(TAG, "%d %d", count, xTaskGetTickCount() - time);
 		}
 		vTaskDelay(pdMS_TO_TICKS(10));
 		// }

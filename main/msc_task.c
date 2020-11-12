@@ -24,6 +24,7 @@ static uint32_t _offset = 0;
 static const char *TAG = "MSC_TASK";
 const esp_partition_t *find_partition = NULL;
 uint8_t *msc_disk;
+
 #define README_CONTENTS \
 	"This is tinyusb's MassStorage Class demo.\r\n\r\n\
 If you find any bugs or get any questions, feel free to file an\r\n\

@@ -175,7 +175,6 @@ static inline uint8_t DAP_GetSerNumString(char *str)
 #define PIN_SWDIO 9
 #define PIN_SWCLK 10
 
-
 #define PIN_TDO 14
 #define PIN_TDI 15
 #define PIN_nTRST 16 // optional
@@ -311,7 +310,7 @@ static inline void PORT_OFF(void)
 static inline uint32_t PIN_SWCLK_TCK_IN(void)
 {
 	// return (uint32_t)READ_PERI_REG(GPIO_PIN10_REG)? 1 : 0;
-	return (uint32_t)GPIO_INPUT_GET(PIN_SWCLK) ? 1 : 0; 
+	return (uint32_t)GPIO_INPUT_GET(PIN_SWCLK) ? 1 : 0;
 }
 
 /** SWCLK/TCK I/O pin: Set Output to High.
@@ -383,12 +382,10 @@ static inline void PIN_SWDIO_OUT(uint32_t bit)
 	if ((bit & 1U) == 1)
 	{
 		WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
-
 	}
 	else
 	{
 		WRITE_PERI_REG(GPIO_OUT_W1TC_REG, (0x1 << PIN_SWDIO));
-
 	}
 }
 
@@ -414,7 +411,7 @@ static inline void PIN_SWDIO_OUT_DISABLE(void)
 
 	// gpio_pad_select_gpio(PIN_SWDIO);
 	gpio_set_direction(PIN_SWDIO, GPIO_MODE_INPUT);
-// gpio_output_enable(PIN_SWDIO);
+	// gpio_output_enable(PIN_SWDIO);
 	// WRITE_PERI_REG(GPIO_OUT_W1TS_REG, (0x1 << PIN_SWDIO));
 }
 
@@ -501,32 +498,35 @@ static inline uint32_t PIN_nRESET_IN(void)
 static inline void PIN_nRESET_OUT(uint32_t bit)
 {
 
-	  if ((bit & 1U) == 1) {
-if(swd_init_debug())
+	if ((bit & 1U) == 1)
+	{
+		if (swd_init_debug())
 		{
-			ESP_LOGI("RST","Connect");
+			ESP_LOGI("RST", "Connect");
 		}
 		else
 		{
-			ESP_LOGI("RST","Disconnect");
+			ESP_LOGI("RST", "Disconnect");
 		}
 
 		uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
-		swd_write_memory(0xE000ED0C,(uint8_t*)&swd_mem_write_data,4);
-	  } else {
+		swd_write_memory(0xE000ED0C, (uint8_t *)&swd_mem_write_data, 4);
+	}
+	else
+	{
 
-		if(swd_init_debug())
+		if (swd_init_debug())
 		{
-			ESP_LOGI("RST","Connect");
+			ESP_LOGI("RST", "Connect");
 		}
 		else
 		{
-			ESP_LOGI("RST","Disconnect");
+			ESP_LOGI("RST", "Disconnect");
 		}
 
 		uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
-		swd_write_memory(0xE000ED0C,(uint8_t*)&swd_mem_write_data,4);
-	  }
+		swd_write_memory(0xE000ED0C, (uint8_t *)&swd_mem_write_data, 4);
+	}
 }
 
 ///@}

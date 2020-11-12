@@ -1,3 +1,12 @@
+/*
+ * @Descripttion : 
+ * @version      : 
+ * @Author       : Kevincoooool
+ * @Date         : 2020-11-03 21:06:24
+ * @LastEditors  : Kevincoooool
+ * @LastEditTime : 2020-11-12 20:41:21
+ * @FilePath     : \ESP32S2_DAP\main\cdc_task.c
+ */
 /* USB Example
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
@@ -24,15 +33,13 @@ void cdc_task(void *params)
 	// RTOS forever loop
 	while (1)
 	{
-		#if CFG_TUD_CDC
+#if CFG_TUD_CDC
 		if (tud_cdc_connected())
 		{
-			
 			// connected and there are data available
 			if (tud_cdc_available())
 			{
 				uint8_t buf[64];
-
 				// read and echo back
 				uint32_t count = tud_cdc_read(buf, sizeof(buf));
 				ESP_LOGI(TAG, "%s", buf);
@@ -45,7 +52,6 @@ void cdc_task(void *params)
 						tud_cdc_write_str("\n > ");
 					}
 				}
-
 				tud_cdc_write_flush();
 			}
 		}
