@@ -100,11 +100,11 @@ void app_main(void)
 //     xTaskCreate(&tcp_conn, "tcp_conn", 4096, NULL, 8, NULL);
 	
 	// Create a task for tinyusb device stack:
-	xTaskCreate(usb_device_task, "usbd", 8192, NULL, configMAX_PRIORITIES -1, NULL);
-	xTaskCreate(hid_task, "hid", 8192, NULL, configMAX_PRIORITIES-2, NULL);
+	xTaskCreate(usb_device_task, "usbd", 4096, NULL, configMAX_PRIORITIES - 1, NULL);
+	xTaskCreate(hid_task, "msc", 4096, NULL, configMAX_PRIORITIES-2, NULL);
 	xTaskCreate(cdc_task, "cdc", 4096, NULL, 8, NULL);
-	xTaskCreate(msc_task, "msc", 8192, NULL, 8, NULL);
-	xTaskCreate(webusb_task, "web", 4096, NULL, 8, NULL);
+	xTaskCreate(msc_task, "msc", 4096, NULL, 8, NULL);
+	xTaskCreate(webusb_task, "web", 4096, NULL, configMAX_PRIORITIES-1, NULL);
 //	xTaskCreate(led_task, "led", 4096, NULL, 20, NULL);
 	return;
 }
