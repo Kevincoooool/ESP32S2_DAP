@@ -338,7 +338,7 @@ static inline void PIN_SWCLK_TCK_CLR(void)
 */
 static inline uint32_t PIN_SWDIO_TMS_IN(void)
 {
-	return (uint32_t)GPIO_INPUT_GET(PIN_SWDIO) ? 1 : 0;
+	return (uint32_t)READ_PERI_REG(GPIO_PIN9_REG) ? 1 : 0;
 }
 
 /** SWDIO/TMS I/O pin: Set Output to High.
@@ -366,7 +366,11 @@ static inline void PIN_SWDIO_TMS_CLR(void)
 static inline uint32_t PIN_SWDIO_IN(void)
 {
 	// return (uint32_t)READ_PERI_REG(GPIO_FUNC9_IN_SEL_CFG_REG)? 1 : 0;
+
 	return (uint32_t)GPIO_INPUT_GET(PIN_SWDIO) ? 1 : 0;
+
+	// return (uint32_t)GPIO_REG_READ(GPIO_PIN_ADDR(14))? 1 : 0;
+
 }
 
 /** SWDIO I/O pin: Set Output (used in SWD mode only).
@@ -500,21 +504,10 @@ static inline void PIN_nRESET_OUT(uint32_t bit)
 
 	if ((bit & 1U) == 1)
 	{
-		if (swd_init_debug())
-		{
-			ESP_LOGI("RST", "Connect");
-		}
-		else
-		{
-			ESP_LOGI("RST", "Disconnect");
-		}
 
-		uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
-		swd_write_memory(0xE000ED0C, (uint8_t *)&swd_mem_write_data, 4);
 	}
 	else
 	{
-
 		if (swd_init_debug())
 		{
 			ESP_LOGI("RST", "Connect");
@@ -523,7 +516,6 @@ static inline void PIN_nRESET_OUT(uint32_t bit)
 		{
 			ESP_LOGI("RST", "Disconnect");
 		}
-
 		uint32_t swd_mem_write_data = 0x05FA0000 | 0x4;
 		swd_write_memory(0xE000ED0C, (uint8_t *)&swd_mem_write_data, 4);
 	}

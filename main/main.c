@@ -33,7 +33,12 @@
 #include "nvs_flash.h"
 #include "my_tcp.h"
 static const char *TAG = "example";
-
+extern uint8_t MYUSB_Request[64 + 1];	// Request  Buffer
+extern uint8_t MYUSB_Response[64 + 1]; // Response Buffer
+extern uint8_t WINUSB_Request[64];	// Request  Buffer
+extern uint8_t WINUSB_Response[64]; // Response Buffer
+extern uint8_t dealing_data;
+extern int hid_len;
 extern EventGroupHandle_t tcp_success_group;
 // USB Device Driver task
 // This top level thread processes all usb events and invokes callbacks
@@ -93,10 +98,20 @@ void app_main(void)
 
 	// Create a task for tinyusb device stack:
 	xTaskCreate(usb_device_task, "usbd", 4096, NULL, configMAX_PRIORITIES - 1, NULL);
-	xTaskCreate(hid_task, "msc", 4096, NULL, configMAX_PRIORITIES - 2, NULL);
+	xTaskCreate(hid_task, "hid", 4096, NULL, configMAX_PRIORITIES, NULL);
 	xTaskCreate(cdc_task, "cdc", 4096, NULL, 8, NULL);
 	xTaskCreate(msc_task, "msc", 4096, NULL, 8, NULL);
 	xTaskCreate(webusb_task, "web", 4096, NULL, configMAX_PRIORITIES - 1, NULL);
 	//	xTaskCreate(led_task, "led", 4096, NULL, 20, NULL);
+
+	// while(1)
+	// {
+	// 	if (dealing_data)
+	// 	{
+	// 		DAP_ProcessCommand(MYUSB_Request, MYUSB_Response);
+	// 		tud_hid_report(0, MYUSB_Response, 64);
+	// 		dealing_data = 0;
+	// 	}
+	// }
 	return;
 }

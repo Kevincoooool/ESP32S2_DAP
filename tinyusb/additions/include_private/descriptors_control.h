@@ -24,8 +24,8 @@
  * Auto ProductID layout's Bitmap:
  *   [MSB]         HID | MSC | CDC          [LSB]
  */
-#define EPNUM_MSC 0x01
-#define EPNUM_VENDOR 0x03
+#define EPNUM_MSC 0x03
+#define EPNUM_VENDOR 0x01
 #ifdef __cplusplus
 extern "C" {
 #endif

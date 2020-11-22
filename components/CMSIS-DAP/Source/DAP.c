@@ -33,7 +33,7 @@
 #include "DAP.h"
 #include "driver/gpio.h"
 
-#define DAP_FW_VER "996_996" // Firmware Version
+#define DAP_FW_VER "ESP32_DAP" // Firmware Version
 
 #if (DAP_PACKET_SIZE < 64U)
 #error "Minimum Packet Size is 64"
