@@ -57,7 +57,7 @@ void cdc_task(void *params)
 		}
 #endif
 		// For ESP32-S2 this delay is essential to allow idle how to run and reset wdt
-		vTaskDelay(pdMS_TO_TICKS(16));
+		vTaskDelay(pdMS_TO_TICKS(10));
 	}
 }
 #if CFG_TUD_CDC

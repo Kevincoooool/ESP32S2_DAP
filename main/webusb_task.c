@@ -232,7 +232,7 @@ void webusb_task(void *p)
 		// 	ESP_LOGI(TAG, "%d %d", count, xTaskGetTickCount() - time);
 		// }
 #endif
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		vTaskDelay(pdMS_TO_TICKS(10));
 		
 	}
 }
